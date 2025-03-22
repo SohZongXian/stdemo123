@@ -1,0 +1,15 @@
+azure_storage==0.37.0
+langchain==0.3.21
+langchain_community==0.3.20
+langchain_core==0.3.47
+langchain_openai==0.3.9
+langgraph==0.3.18
+msal==1.31.1
+numpy==2.2.4
+pandas==2.2.3
+plotly==6.0.1
+python-dotenv==1.0.1
+SQLAlchemy==2.0.37
+streamlit==1.38.0
+streamlit_navigation_bar==3.3.0
+typing_extensions==4.12.2
