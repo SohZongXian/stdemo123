@@ -1,3 +1,4 @@
+azure-identity
 langchain==0.3.21
 langchain_community==0.3.20
 langchain_core==0.3.47
