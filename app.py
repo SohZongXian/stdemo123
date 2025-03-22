@@ -84,7 +84,7 @@ tenant_id = os.getenv("TENANT_ID")
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
 authority = f"https://login.microsoftonline.com/{tenant_id}"
-redirect_uri = "https://stdemo123-nucsd5jcnm4gdr8zvaehaw.streamlit.app/?state=callback"
+redirect_uri = "https://stdemo123-nucsd5jcnm4gdr8zvaehaw.streamlit.app/"
 scopes = ["User.Read"]
 
 # Initialize MSAL application
@@ -94,26 +94,41 @@ app = msal.ConfidentialClientApplication(
     client_credential=client_secret,
 )
 
+# Initialize session states
+if "auth_flow_initiated" not in st.session_state:
+    st.session_state["auth_flow_initiated"] = False
+
 # Handle query parameters for callback after login
 query_params = st.query_params
-if "state" in query_params and "code" in query_params:
-    result = app.acquire_token_by_authorization_code(
-        query_params["code"],
-        scopes=scopes,
-        redirect_uri=redirect_uri,
-    )
-    if "access_token" in result:
-        st.session_state["token"] = result["access_token"]
-        st.session_state["logged_in"] = True
-        if "id_token_claims" in result:
-            user_info = result["id_token_claims"]
-            st.session_state["user_name"] = user_info.get("name", "User")
+if "code" in query_params:
+    try:
+        # Acquire token using the authorization code
+        result = app.acquire_token_by_authorization_code(
+            query_params["code"],
+            scopes=scopes,
+            redirect_uri=redirect_uri,
+        )
+        
+        if "access_token" in result:
+            st.session_state["token"] = result["access_token"]
+            st.session_state["logged_in"] = True
+            if "id_token_claims" in result:
+                user_info = result["id_token_claims"]
+                st.session_state["user_name"] = user_info.get("name", "User")
+            else:
+                st.session_state["user_name"] = "User"
+            
+            # Clear the query parameters to prevent reprocessing
+            st.query_params.clear()
+            st.rerun()
         else:
-            st.session_state["user_name"] = "User"
-        st.query_params.clear()
-        st.rerun()
-    # else:
-    #     st.error("Login failed")
+            if "error" in result:
+                st.error(f"Authentication error: {result.get('error')} - {result.get('error_description')}")
+            else:
+                st.error("Login failed. Please try again.")
+    except Exception as e:
+        st.error(f"An error occurred during authentication: {str(e)}")
+        st.session_state["auth_flow_initiated"] = False
 
 # Define navigation pages and styles
 pages = ["Main", "Procurement Dashboard", "NL2SQL Chatbot"]
@@ -168,8 +183,12 @@ if "logged_in" in st.session_state and st.session_state["logged_in"]:
     if go_to:
         go_to()
 else:
-    # Get login URL for Azure AD
-    login_url = app.get_authorization_request_url(scopes, redirect_uri=redirect_uri)
+    # Create login page with direct auth flow
+    login_url = app.get_authorization_request_url(
+        scopes,
+        redirect_uri=redirect_uri,
+        prompt="select_account"  # Force prompt to select account
+    )
     
     # Login page
     st.markdown(
@@ -187,14 +206,21 @@ else:
             <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px; color: #E0E0E0;">
                 The NL2SQL Chatbot redefines how you interact with your data by enabling natural language queries. Whether you're a data expert or a novice, this tool makes data exploration intuitive and accessible.
             </p>
-            <div style="display: flex; justify-content: center; margin-top: 20px;">
-                <a href="{login_url}" target="_self">
-                    <button style="width: 1000px; background-color: #007BFF; color: white; border: none; border-radius: 5px; padding: 10px 20px; cursor: pointer; font-size: 16px;">
-                        Login with Azure
-                    </button>
-                </a>
-            </div>
         </div>
         """,
         unsafe_allow_html=True
     )
+    
+    # Create a button that opens the Microsoft login page in the current window
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(
+            f"""
+            <a href="{login_url}" target="_self" style="text-decoration: none; display: block; text-align: center;">
+                <button style="width: 100%; background-color: #007BFF; color: white; border: none; border-radius: 5px; padding: 12px 20px; cursor: pointer; font-size: 16px; font-weight: bold;">
+                    Login with Microsoft
+                </button>
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
