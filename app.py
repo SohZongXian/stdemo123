@@ -84,7 +84,7 @@ tenant_id = os.getenv("TENANT_ID")
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
 authority = f"https://login.microsoftonline.com/{tenant_id}"
-redirect_uri = "http://localhost:8501/?state=callback"
+redirect_uri = "https://stdemo123-nucsd5jcnm4gdr8zvaehaw.streamlit.app/?state=callback"
 scopes = ["User.Read"]
 
 # Initialize MSAL application
